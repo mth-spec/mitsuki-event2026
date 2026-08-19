@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>ブラインドスポーツ EXPO 2026 音声スタンプラリー</title>
   <style>
+    /* 完全な漆黒背景と純白文字のハイコントラストデザイン */
     body {
       font-family: sans-serif;
       max-width: 600px;
@@ -43,9 +44,8 @@
       background: #111111;
     }
     .quiz-box {
-      font-size: 1.1rem;
+      font-size: 1.05rem;
       margin: 10px 0;
-      font-weight: bold;
       color: #ffffff;
     }
     .answer-box {
@@ -80,22 +80,38 @@
       margin-top: 40px;
       font-size: 0.9rem;
     }
+    /* 視覚的には隠すがスクリーンリーダーにだけ読ませる領域 */
+    .sr-only {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      padding: 0;
+      margin: -1px;
+      overflow: hidden;
+      clip: rect(0, 0, 0, 0);
+      border: 0;
+    }
   </style>
 </head>
 <body>
 
-  <header>
+  <header role="banner">
     <h1>ブラインドスポーツ EXPO 2026<br>音声探偵スタンプラリー</h1>
   </header>
 
-  <main>
-    <section class="status-card" aria-live="polite">
+  <main role="main">
+    <!-- 進行状況アナウンス（aria-liveで変化を自動通知） -->
+    <section class="status-card" aria-live="polite" aria-atomic="true">
       <h2 style="margin-top:0;">スタンプラリー進行状況</h2>
       <p id="progress-text" style="font-size: 1.2rem; font-weight: bold; margin-bottom:0;">獲得数：0 / 10 個</p>
     </section>
 
-    <section>
-      <h2>チェックポイント一覧（①〜⑩）</h2>
+    <!-- 音声読み上げ用のリアルタイム通知アナウンス領域 -->
+    <div id="aria-announce" class="sr-only" aria-live="assertive"></div>
+
+    <!-- チェックポイント一覧（どこからでも自由に選択可能） -->
+    <section aria-label="チェックポイント一覧">
+      <h2>10箇所のブース一覧（自由な順番で回れます）</h2>
       <ul class="stamp-list" id="stamp-container"></ul>
     </section>
 
@@ -103,19 +119,21 @@
   </main>
 
   <script>
+    // 10箇所の問いかけと正解テキスト（自律周遊対応）
     const stampData = [
-      { id: 1, num: "①", question: "「みつきのクラブだ！って、何？ 確認に行ってみよう！」", answer: "「ここはみつきのアスリートクラブだよ！これからブラインド競技を始めたい方や、ガイドヘルパーさんでブラインド競技のガイドに入りたいとか興味あるとか、そういう方の相談に応じています！」", next: "次は、上へ進んで②のポイントへ向かおう！" },
-      { id: 2, num: "②", question: "「音を聞いてナイスショット！この競技はなんだろう？」", answer: "「音を繋ぐ、正解はブラインドテニス！で、日本ブラインドテニス連盟関東地域協会です！」", next: "次は、さらに上へ進んで③のポイントへ向かおう！" },
-      { id: 3, num: "③", question: "「気を感じて技を決めよう！この競技はなんだろう？」", answer: "「正解は気配をよみ、技を極める合気道！合気道東京都障がい者合気道同好会です！」", next: "次は、さらに上へ進んで④のポイントへ向かおう！" },
-      { id: 4, num: "④", question: "「音のなるボールを打て！この競技は？」", answer: "「守備は素手！サウンドベースボールジャパンです！」", next: "次は、左側の一番上、⑤のポイントへ向かおう！" },
-      { id: 5, num: "⑤", question: "「ゴール自体が音を出す！この競技はなんだろう？」", answer: "「ゴールが君を呼んでいる、ブラインドバスケットボールでブランドニューバスケのみなさんです！」", next: "折り返し地点！次は右側の一番上、⑥のポイントへ向かおう！" },
-      { id: 6, num: "⑥", question: "「伴走ロープ持った？この競技はなんだろう？」", answer: "「手元をつなぐ50cmの絆！正解は陸上でした！」", next: "次は、下へ進んで⑦のポイントへ向かおう！" },
-      { id: 7, num: "⑦", question: "「壁のてっぺんを目指せ！この競技はなんだろう？」", answer: "「命綱は、相棒の声！ここはパラクライミング日本代表濵ノ上選手がいるよ！トークショーも出るよ！」", next: "次は、さらに下へ進んで⑧のポイントへ向かおう！" },
-      { id: 8, num: "⑧", question: "「３人で鈴の音をブロック！この競技はなんだろう？」", answer: "「静寂の中、全身が壁になる！正解はゴールボールで、日本ゴールボール協会のみなさんです！」", next: "次は、さらに下へ進んで⑨のポイントへ向かおう！" },
-      { id: 9, num: "⑨", question: "「ボールを持ってトライだ！この競技はなんだろう？」", answer: "「音を抱えて突き進め！正解はブラインドラグビーで、日本ブラインドラグビー協会のみなさんです！今年の11月には国際大会が日本で開催されるよ！応援しよう！」", next: "次がいよいよ最後！一番下の⑩のポイントへ向かおう！" },
-      { id: 10, num: "⑩", question: "「ネットの下をくぐらせろ！この競技はなんだろう？」", answer: "「隙間4.2cmの限界バトル！正解はサウンド・テーブル・テニスで、東京都サウンドテーブルテニス協会です！」", next: "おめでとうございます！10箇所全スタンプ獲得！受付で景品をもらおう！" }
+      { id: 1, num: "①", question: "みつきのクラブだ！って、何？ 確認に行ってみよう！", answer: "ここはみつきのアスリートクラブだよ！これからブラインド競技を始めたい方や、ガイドヘルパーさんでブラインド競技のガイドに入りたいとか興味あるとか、そういう方の相談に応じています！" },
+      { id: 2, num: "②", question: "音を聞いてナイスショット！この競技はなんだろう？", answer: "音を繋ぐ、正解はブラインドテニス！で、日本ブラインドテニス連盟関東地域協会です！" },
+      { id: 3, num: "③", question: "気を感じて技を決めよう！この競技はなんだろう？", answer: "正解は気配をよみ、技を極める合気道！合気道東京都障がい者合気道同好会です！" },
+      { id: 4, num: "④", question: "音のなるボールを打て！この競技は？", answer: "守備は素手！サウンドベースボールジャパンです！" },
+      { id: 5, num: "⑤", question: "ゴール自体が音を出す！この競技はなんだろう？", answer: "ゴールが君を呼んでいる、ブラインドバスケットボールでブランドニューバスケのみなさんです！" },
+      { id: 6, num: "⑥", question: "伴走ロープ持った？この競技はなんだろう？", answer: "手元をつなぐ50cmの絆！正解は陸上でした！" },
+      { id: 7, num: "⑦", question: "壁のてっぺんを目指せ！この競技はなんだろう？", answer: "命綱は、相棒の声！ここはパラクライミング日本代表濵ノ上選手がいるよ！トークショーも出るよ！" },
+      { id: 8, num: "⑧", question: "３人で鈴の音をブロック！この競技はなんだろう？", answer: "静寂の中、全身が壁になる！正解はゴールボールで、日本ゴールボール協会のみなさんです！" },
+      { id: 9, num: "⑨", question: "ボールを持ってトライだ！この競技はなんだろう？", answer: "音を抱えて突き進め！正解はブラインドラグビーで、日本ブラインドラグビー協会のみなさんです！今年の11月には国際大会が日本で開催されるよ！応援しよう！" },
+      { id: 10, num: "⑩", question: "ネットの下をくぐらせろ！この競技はなんだろう？", answer: "隙間4.2cmの限界バトル！正解はサウンド・テーブル・テニスで、東京都サウンドテーブルテニス協会です！" }
     ];
 
+    // ブラウザの音声読み上げ
     function speak(text) {
       if ('speechSynthesis' in window) {
         window.speechSynthesis.cancel();
@@ -124,6 +142,11 @@
         uttr.rate = 1.0;
         window.speechSynthesis.speak(uttr);
       }
+      // VoiceOver用の通知領域にもテキストを投入
+      const announcer = document.getElementById('aria-announce');
+      if (announcer) {
+        announcer.textContent = text;
+      }
     }
 
     function getClearedStamps() {
@@ -131,10 +154,10 @@
       return saved ? JSON.parse(saved) : [];
     }
 
-    // 問いかけだけを聞く関数（正解は言わない）
+    // 問いかけだけを聞く（自由探索用）
     function askQuestion(id) {
       const item = stampData.find(s => s.id === id);
-      speak(`${item.num}の問いかけ。${item.question}`);
+      speak(`${item.num}のヒント。${item.question}`);
     }
 
     // 正解発表＆スタンプ獲得処理
@@ -145,15 +168,25 @@
       if (!cleared.includes(id)) {
         cleared.push(id);
         localStorage.setItem('expoClearedStamps', JSON.stringify(cleared));
-        const message = `スタンプゲット！${item.num}の正解発表！${item.answer}。${item.next}`;
+        
+        const total = cleared.length;
+        let milestone = "";
+        if (total === 10) {
+          milestone = "おめでとうございます！10箇所すべてのスタンプが集まりました！受付で景品をもらおう！";
+        } else {
+          milestone = `現在 ${total} 個目のスタンプを獲得！次は近くの空いているブースを探してみよう！`;
+        }
+
+        const message = `スタンプゲット！${item.num}の正解発表！${item.answer}。${milestone}`;
         speak(message);
       } else {
-        const message = `${item.num}はすでに獲得済みです。${item.answer}。${item.next}`;
+        const message = `${item.num}はすでに獲得済みです。${item.answer}`;
         speak(message);
       }
       render();
     }
 
+    // 画面描画（見出し構造・スクリーンリーダー最適化）
     function render() {
       const cleared = getClearedStamps();
       const container = document.getElementById('stamp-container');
@@ -167,16 +200,17 @@
         const li = document.createElement('li');
         li.className = `stamp-item ${isCleared ? 'cleared' : ''}`;
         
-        // 未獲得時は「問いかけを聞くボタン」だけを表示（正解は絶対に隠す）
-        // 獲得済みになって初めて「正解」が表示・再生される
+        // <h3>タグで見出し構造を明確化し、VoiceOverの見出しジャンプに対応
         li.innerHTML = `
-          <h3 style="margin-top:0;">${item.num} ${isCleared ? '【スタンプGET！】' : '【未獲得】'}</h3>
+          <h3 style="margin-top:0; font-size: 1.2rem;">
+            ${item.num} ${isCleared ? '【獲得済み】' : '【未獲得】'}
+          </h3>
           <div class="quiz-box">問いかけ：${item.question}</div>
-          ${isCleared ? `<div class="answer-box">正解：${item.answer}</div>` : ''}
+          ${isCleared ? `<div class="answer-box"><strong>正解：</strong>${item.answer}</div>` : ''}
           
           ${isCleared ? 
-            `<button type="button" onclick="checkIn(${item.id})">正解とガイドをもう一度聞く</button>` : 
-            `<button type="button" onclick="askQuestion(${item.id})">問いかけ（ヒント）を聞く</button>`
+            `<button type="button" aria-label="${item.num} 正解ともう一度ガイドを聞く" onclick="checkIn(${item.id})">正解とガイドをもう一度聞く</button>` : 
+            `<button type="button" aria-label="${item.num} 問いかけを聞く" onclick="askQuestion(${item.id})">問いかけ（ヒント）を聞く</button>`
           }
         `;
         container.appendChild(li);
@@ -186,12 +220,12 @@
     function resetRally() {
       if (confirm("スタンプの記録をリセットしますか？")) {
         localStorage.removeItem('expoClearedStamps');
-        speak("リセットしました。①番の問いかけからスタートしよう！");
+        speak("スタンプの記録をリセットしました。好きなブースからスタートしよう！");
         render();
       }
     }
 
-    // NFCタッチ時（URLの末尾に ?point=1 などがついている場合）の自動チェックイン
+    // NFCタッチ時（?point=1〜10）の自動チェックイン
     window.addEventListener('DOMContentLoaded', () => {
       render();
       const urlParams = new URLSearchParams(window.location.search);
