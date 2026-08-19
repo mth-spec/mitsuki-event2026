@@ -225,15 +225,24 @@
       }
     }
 
-    // NFCタッチ時（?point=1〜10）の自動チェックイン
+    // NFCタッチ時（?point=1〜10）の自動読み上げ＆フォーカス移動処理
     window.addEventListener('DOMContentLoaded', () => {
       render();
       const urlParams = new URLSearchParams(window.location.search);
       const point = parseInt(urlParams.get('point'));
+      
       if (point >= 1 && point <= 10) {
+        // 自動でチェックイン処理
+        checkIn(point);
+        
+        // 読み上げの重複を防ぎ、VoiceOverが正解カードを直接読めるようにフォーカスを移動
         setTimeout(() => {
-          checkIn(point);
-        }, 500);
+          const targetCard = document.querySelectorAll('.stamp-item')[point - 1];
+          if (targetCard) {
+            targetCard.setAttribute('tabindex', '-1');
+            targetCard.focus(); // VoiceOverのフォーカスを正解カードへ自動ジャンプ！
+          }
+        }, 300);
       }
     });
   </script>
