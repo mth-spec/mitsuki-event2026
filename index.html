@@ -26,7 +26,27 @@
       border: 2px solid #ffffff;
       border-radius: 8px;
       padding: 15px;
+      margin-bottom: 20px;
+    }
+    /* 全達成時のスペシャルカード */
+    .clear-card {
+      background: #ffffff;
+      color: #000000;
+      border: 4px solid #ffffff;
+      border-radius: 12px;
+      padding: 20px;
       margin-bottom: 25px;
+      text-align: center;
+    }
+    .clear-card h2 {
+      margin-top: 0;
+      font-size: 1.5rem;
+      color: #000000;
+    }
+    .clear-card p {
+      font-size: 1.1rem;
+      font-weight: bold;
+      margin-bottom: 15px;
     }
     .stamp-list {
       list-style: none;
@@ -73,6 +93,14 @@
       outline: 4px solid #ffffff;
       outline-offset: 3px;
     }
+    /* スタッフ交換用の目立つボタン */
+    .exchange-btn {
+      background: #000000;
+      color: #ffffff;
+      border: 3px solid #000000;
+      font-size: 1.1rem;
+      padding: 16px;
+    }
     .reset-btn {
       background: #000000;
       color: #ffffff;
@@ -80,7 +108,6 @@
       margin-top: 40px;
       font-size: 0.9rem;
     }
-    /* 視覚的には隠すがスクリーンリーダーにだけ読ませる領域 */
     .sr-only {
       position: absolute;
       width: 1px;
@@ -100,7 +127,10 @@
   </header>
 
   <main role="main">
-    <!-- 進行状況アナウンス（aria-liveで変化を自動通知） -->
+    <!-- 全クリア時にのみ表示されるスペシャル達成領域 -->
+    <div id="clear-container"></div>
+
+    <!-- 進行状況アナウンス -->
     <section class="status-card" aria-live="polite" aria-atomic="true">
       <h2 style="margin-top:0;">スタンプラリー進行状況</h2>
       <p id="progress-text" style="font-size: 1.2rem; font-weight: bold; margin-bottom:0;">獲得数：0 / 10 個</p>
@@ -109,17 +139,16 @@
     <!-- 音声読み上げ用のリアルタイム通知アナウンス領域 -->
     <div id="aria-announce" class="sr-only" aria-live="assertive"></div>
 
-    <!-- チェックポイント一覧（どこからでも自由に選択可能） -->
+    <!-- チェックポイント一覧（自由な順番で回れる） -->
     <section aria-label="チェックポイント一覧">
       <h2>10箇所のブース一覧（自由な順番で回れます）</h2>
       <ul class="stamp-list" id="stamp-container"></ul>
     </section>
 
-    <button type="button" class="reset-btn" onclick="resetRally()">スタンプの記録をリセットする</button>
+    <button type="button" class="reset-btn" onclick="resetRally()">自分でスタンプの記録を最初からやり直す</button>
   </main>
 
   <script>
-    // 10箇所の問いかけと正解テキスト（自律周遊対応）
     const stampData = [
       { id: 1, num: "①", question: "みつきのクラブだ！って、何？ 確認に行ってみよう！", answer: "ここはみつきのアスリートクラブだよ！これからブラインド競技を始めたい方や、ガイドヘルパーさんでブラインド競技のガイドに入りたいとか興味あるとか、そういう方の相談に応じています！" },
       { id: 2, num: "②", question: "音を聞いてナイスショット！この競技はなんだろう？", answer: "音を繋ぐ、正解はブラインドテニス！で、日本ブラインドテニス連盟関東地域協会です！" },
@@ -133,7 +162,6 @@
       { id: 10, num: "⑩", question: "ネットの下をくぐらせろ！この競技はなんだろう？", answer: "隙間4.2cmの限界バトル！正解はサウンド・テーブル・テニスで、東京都サウンドテーブルテニス協会です！" }
     ];
 
-    // ブラウザの音声読み上げ
     function speak(text) {
       if ('speechSynthesis' in window) {
         window.speechSynthesis.cancel();
@@ -142,7 +170,6 @@
         uttr.rate = 1.0;
         window.speechSynthesis.speak(uttr);
       }
-      // VoiceOver用の通知領域にもテキストを投入
       const announcer = document.getElementById('aria-announce');
       if (announcer) {
         announcer.textContent = text;
@@ -154,13 +181,11 @@
       return saved ? JSON.parse(saved) : [];
     }
 
-    // 問いかけだけを聞く（自由探索用）
     function askQuestion(id) {
       const item = stampData.find(s => s.id === id);
       speak(`${item.num}のヒント。${item.question}`);
     }
 
-    // 正解発表＆スタンプ獲得処理
     function checkIn(id) {
       let cleared = getClearedStamps();
       const item = stampData.find(s => s.id === id);
@@ -186,21 +211,43 @@
       render();
     }
 
-    // 画面描画（見出し構造・スクリーンリーダー最適化）
+    // スタッフが景品を渡した後に押すボタンの処理（自動リセット）
+    function exchangePrizeByStaff() {
+      if (confirm("【受付スタッフ専用操作】\n景品をお渡ししましたか？\n「OK」を押すと、スタンプの記録がリセットされます。")) {
+        localStorage.removeItem('expoClearedStamps');
+        speak("景品の受取が完了しました。スタンプの記録をリセットしました。ありがとうございました！");
+        render();
+      }
+    }
+
     function render() {
       const cleared = getClearedStamps();
       const container = document.getElementById('stamp-container');
       const progressText = document.getElementById('progress-text');
+      const clearContainer = document.getElementById('clear-container');
       
       progressText.textContent = `獲得数：${cleared.length} / 10 個`;
       container.innerHTML = '';
+      clearContainer.innerHTML = '';
+
+      // 10個すべて集まった場合、目立つクリア画面とスタッフリセットボタンを表示
+      if (cleared.length === 10) {
+        clearContainer.innerHTML = `
+          <div class="clear-card" tabindex="-1" id="clear-card-element">
+            <h2>🎉 10個達成！全クリア！</h2>
+            <p>おめでとうございます！すべてのスタンプが集まりました。<br>受付でこの画面をお見せください。</p>
+            <button type="button" class="exchange-btn" onclick="exchangePrizeByStaff()">
+              【スタッフ確認用】<br>景品と交換してスタンプをリセット
+            </button>
+          </div>
+        `;
+      }
 
       stampData.forEach(item => {
         const isCleared = cleared.includes(item.id);
         const li = document.createElement('li');
         li.className = `stamp-item ${isCleared ? 'cleared' : ''}`;
         
-        // <h3>タグで見出し構造を明確化し、VoiceOverの見出しジャンプに対応
         li.innerHTML = `
           <h3 style="margin-top:0; font-size: 1.2rem;">
             ${item.num} ${isCleared ? '【獲得済み】' : '【未獲得】'}
@@ -225,22 +272,26 @@
       }
     }
 
-    // NFCタッチ時（?point=1〜10）の自動読み上げ＆フォーカス移動処理
     window.addEventListener('DOMContentLoaded', () => {
       render();
       const urlParams = new URLSearchParams(window.location.search);
       const point = parseInt(urlParams.get('point'));
       
       if (point >= 1 && point <= 10) {
-        // 自動でチェックイン処理
         checkIn(point);
         
-        // 読み上げの重複を防ぎ、VoiceOverが正解カードを直接読めるようにフォーカスを移動
         setTimeout(() => {
-          const targetCard = document.querySelectorAll('.stamp-item')[point - 1];
-          if (targetCard) {
-            targetCard.setAttribute('tabindex', '-1');
-            targetCard.focus(); // VoiceOverのフォーカスを正解カードへ自動ジャンプ！
+          const cleared = getClearedStamps();
+          // 10個集まった時は達成カードに、それ以外は該当カードにフォーカス移動
+          if (cleared.length === 10) {
+            const clearCard = document.getElementById('clear-card-element');
+            if (clearCard) clearCard.focus();
+          } else {
+            const targetCard = document.querySelectorAll('.stamp-item')[point - 1];
+            if (targetCard) {
+              targetCard.setAttribute('tabindex', '-1');
+              targetCard.focus();
+            }
           }
         }, 300);
       }
